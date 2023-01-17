@@ -70,8 +70,15 @@ class AdversarialExampleTrainer():
         
         mapping_fn = self._create_adversarial_mapping(epsilon)
         adversarial_dataset = self.training_dataset.map(mapping_fn)
-        return self.model.fit(adversarial_dataset, epochs=epochs, steps_per_epoch=self.training_batches, callbacks=callbacks)
-
+        return self.model.fit(
+            adversarial_dataset,
+            epochs=epochs,
+            steps_per_epoch=self.training_batches,
+            validation_data=self.validation_dataset,
+            validation_steps=self.validation_batches,
+            callbacks=callbacks
+        )
+        
     def display_adversarial_images(self, epsilon=0.01, num_images=16, titles=False, use_validation_dataset=False, **kwargs):
         """
         Create and display a number of adversarial images
