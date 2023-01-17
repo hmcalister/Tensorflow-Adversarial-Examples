@@ -409,7 +409,8 @@ def maximal_class_activations(
     model: tf.keras.Model,
     steps = 1000,
     step_size = 0.01,
-    titles = False
+    titles = False,
+    **kwargs
     ):
     """
     Starting with a set of random inputs, compute back propagation through the network
@@ -474,5 +475,5 @@ def maximal_class_activations(
     subplot_titles = []
     if titles:
         for i, (prediction, confidence) in enumerate(zip(best_predictions, outputs)):
-            subplot_titles.append(f"True {i}\nPred {prediction} ({confidence[prediction]})")
-    plot_images(class_images, subplot_titles=subplot_titles)
+            subplot_titles.append(f"True {i}\nPred {prediction} ({confidence[prediction]:.2f})")
+    plot_images(class_images, subplot_titles=subplot_titles, **kwargs)
