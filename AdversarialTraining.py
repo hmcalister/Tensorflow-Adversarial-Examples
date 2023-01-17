@@ -1,7 +1,7 @@
 # fmt: off
 import pandas as pd
 from Utilities.Utils import *
-from Utilities.Tasks.CIFAR10ClassificationTask import CIFAR10ClassificationTask as Task
+from Utilities.Tasks.MNISTClassificationTask import MNISTClassificationTask as Task
 from Utilities.AdversarialTraining import AdversarialExampleTrainer
 
 import os
@@ -11,7 +11,7 @@ import tensorflow as tf
 print(f"GPU: {tf.config.list_physical_devices('GPU')}")
 
 # Define paths to save important data to 
-MODEL_SAVE_PATH = "models/CIFAR10_INTERLEAVED_ADVERSARIAL_MODEL"
+MODEL_SAVE_PATH = "models/MNIST_INTERLEAVED_ADVERSARIAL_MODEL"
 HISTORY_SAVE_PATH = "history.csv"
 # True for easier debugging
 # False for compiled models, faster train time
@@ -20,7 +20,7 @@ RUN_EAGERLY: bool = False
 # Training parameters
 ITERATION_MAX = 100
 VANILLA_EPOCHS = 10
-ADVERSARIAL_EPOCHS = 1
+ADVERSARIAL_EPOCHS = 3
 training_batches = 0
 validation_batches = 0
 batch_size = 32
@@ -33,18 +33,17 @@ task_labels = [
 
 # Create a model for the task
 model_inputs = model_layer = tf.keras.Input(shape=model_input_shape)
-model_layer = tf.keras.layers.Conv2D(32, (3,3), activation="relu", name="conv2d_0")(model_layer)
-model_layer = tf.keras.layers.Conv2D(32, (3,3), activation="relu", name="conv2d_1")(model_layer)
-model_layer = tf.keras.layers.Conv2D(32, (3,3), activation="relu", name="conv2d_2")(model_layer)
+model_layer = tf.keras.layers.Conv2D(16, (3,3), activation="relu", name="conv2d_0")(model_layer)
+model_layer = tf.keras.layers.Conv2D(16, (3,3), activation="relu", name="conv2d_1")(model_layer)
 model_layer = tf.keras.layers.MaxPool2D((2,2))(model_layer)
 model_layer = tf.keras.layers.BatchNormalization()(model_layer)
-model_layer = tf.keras.layers.Conv2D(64, (3,3), activation="relu", name="conv2d_3")(model_layer)
-model_layer = tf.keras.layers.Conv2D(64, (3,3), activation="relu", name="conv2d_4")(model_layer)
+model_layer = tf.keras.layers.Conv2D(16, (3,3), activation="relu", name="conv2d_3")(model_layer)
+model_layer = tf.keras.layers.Conv2D(16, (3,3), activation="relu", name="conv2d_4")(model_layer)
 model_layer = tf.keras.layers.MaxPool2D((2,2))(model_layer)
 model_layer = tf.keras.layers.BatchNormalization()(model_layer)
 model_layer = tf.keras.layers.Flatten()(model_layer)
-model_layer = tf.keras.layers.Dense(64, activation="relu")(model_layer) 
-model_layer = tf.keras.layers.Dense(64, activation="relu")(model_layer)
+model_layer = tf.keras.layers.Dense(32, activation="relu")(model_layer) 
+model_layer = tf.keras.layers.Dense(32, activation="relu")(model_layer)
 model_layer = tf.keras.layers.Dense(len(task_labels))(model_layer)
 model = tf.keras.Model(inputs=model_inputs, outputs=model_layer, name="model")
 
@@ -65,6 +64,10 @@ training_image_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomRotation(0.15)
 ])
 
+optimizer = tf.keras.optimizers.Adam(
+    learning_rate=0.0005
+)
+
 # Create a sequential task - for easy of training later
 task = Task(
         name="Task",
@@ -77,6 +80,7 @@ task = Task(
         training_image_augmentation = training_image_augmentation,
         run_eagerly = RUN_EAGERLY,
     )
+task.compile_model(loss_fn ,optimizer=optimizer)
 
 # Set how much perturbation is added to adversarial examples 
 EPSILON = 0.01
