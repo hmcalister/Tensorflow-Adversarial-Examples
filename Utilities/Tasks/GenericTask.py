@@ -30,7 +30,7 @@ class GenericTask:
             y_lim: Union[Tuple[float, float], None] = None,
         ) -> None:
         """
-        Create a new SequentialTask.
+        Create a new GenericTask.
         A task consists of a model (already compiled), training data,
         and validation data to test the model. 
 
