@@ -20,16 +20,20 @@ The goal of this project is to train a neural network using adversarial examples
 
 The large spikes every 10 epochs is the interruption due to an adversarial epoch. It is also unfortunate that validation loss increased so wildly - I think the additional adversarial examples may have allowed the network to overfit the training data even more than is usually possible?
 
+One solution, especially for simple tasks like MNIST, is to not train for so long! About 20 epochs is good enough!
+
 ### Adversarial Examples
 
 ![Some images produced using the adversarial example technique detailed above](images/adversarialExample.png)
 
-For MNIST, which is greyscale, an adversarial example is simply a spattering of monocolored noise across the image! You may also not there are several images with seemingly no noise - this is because these examples were generated using the network after the training the produced the loss graph above. In other words, the model has overfit these images so well that tensorflow gave up on assigning a gradient. There is effectively no way to change these images to trick the model (within the bounds of a 64 bit integer used by tensorflow graphs).
+For MNIST, which is greyscale, an adversarial example is simply a spattering of monocolored noise across the image! In your trials, you may notice there are several images with seemingly no noise. This occurs when a model has massively overfit the training data - so much so that tensorflow gave up on assigning a gradient. There is effectively no way to change these images to trick the model (within the bounds of a 64 bit integer used by tensorflow graphs).
 
 ### Maximal Class Activations
 
 ![The classes of MNIST (digits 0-9) as predicted by a gradient ascent through the model](images/maximalClassActivation.png)
 
-Finally, we have some examples of maximal class activations. These are still not great (else I would already be a millionaire) but on closer inspection there appears to be some structure we expect. The image for 2 seems to have a slight ghost of a 2, as does 4, 5, and 8. The other classes may be reduced to random noise, or perhaps are taking gradients from so many filters that they are effectively combinations of every *possible* digit in that class, rather than a prototypical digit.
+Finally, we have some examples of maximal class activations. These are still not great (else I would already be a millionaire) but on closer inspection there appears to be some structure we expect. The image for 2 seems to have a slight ghost of a 3, as does 4, 6, 8, and 9. The other classes may be reduced to random noise, or perhaps are taking gradients from so many filters that they are effectively combinations of every *possible* digit in that class, rather than a prototypical digit.
 
-To improve this method further, we could perhaps look into starting the images at a different point in image-space (e.g. all black, all white, maybe an image of a different class). This may help reduce the impact of the model operating in a region of weight space we did not train it on.
+We can improve these images by adding some constraints on the generated tensors. If we add blur every few steps we implicitly penalize (explicitly remove) high frequency terms - which removes the fuzziness over the image we see above. If we also every so often move the image around by a few pixels we can avoid the images being true adversarial examples - better picking up the features intended. An example of the images produced with both of these effects is below:
+
+![Maximal Class Images with added constraints during creation](images/betterMaximalClassActivation.png)
