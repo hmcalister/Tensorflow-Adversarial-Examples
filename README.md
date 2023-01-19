@@ -16,7 +16,7 @@ The goal of this project is to train a neural network using adversarial examples
 
 ### Loss During Training
 
-![Graph of loss and validation loss over an adversarial training period](images/loss.png)
+![Graph of loss and validation loss over an adversarial training period](images/loss2.png)
 
 The large spikes every 10 epochs is the interruption due to an adversarial epoch. It is also unfortunate that validation loss increased so wildly - I think the additional adversarial examples may have allowed the network to overfit the training data even more than is usually possible?
 
