@@ -409,6 +409,8 @@ def maximal_class_activations(
     model: tf.keras.Model,
     steps = 1000,
     step_size = 0.01,
+    jitter_period = 0,
+    blur_period = 0,
     titles = False,
     **kwargs
     ):
@@ -431,12 +433,24 @@ def maximal_class_activations(
             The number of steps to take. More steps takes longer but tends to produce better results
         step_size: float
             The contribution of each step to the inputs. A smaller step size will be more stable but may take more steps
+        jitter_period: int
+            The number of steps to wait before jittering again. A period of 0 is no jitter
+            Jittering is implemented by rolling the image one pixel right/down, then
+            at the next period rolling the image one pixel left/up, then left/up again, then right/down 
+            to return to center. The image essentially takes a sinusoidal path.
+            This implements some transformation invariability into the class activations
+        blur_period: int
+            The number of steps to wait before blurring again. A period of 0 is no blur
+            Blurring is implemented by applying a gaussian filter of kernel (3,3) to the images
+            This implicitly implements some high frequency noise filtering without having to touch
+            that in a loss function working on batches!
         titles: bool
             Flag to add titles to each image detailing expected class, predicted class, and confidence
     """
 
     # This implementation processes all classes at once
     # This leads to moderately complex code but very efficient performance, especially on a GPU
+    from tensorflow_addons.image import gaussian_filter2d
 
     # Noise has same base shape as image inputs. This is found by model input shape
     noise_shape = model.input_shape
@@ -453,7 +467,19 @@ def maximal_class_activations(
     x: tf.Variable = tf.Variable(tf.cast(np.random.random(noise_shape), tf.float32))
     for step_index in range(steps):
         print(f"STEP {step_index+1}/{steps}", end="\r")
+
+        if jitter_period > 0 and step_index%jitter_period==0:
+            current_phase = 0.5*np.pi*step_index//jitter_period
+            shift = np.around([np.sin(current_phase), np.cos(current_phase)])
+            shift = tf.cast(shift, tf.int32)
+            # roll over x,y not batch or colors!
+            x.assign(tf.roll(x, shift=shift, axis=[1,2]))
+
+        if blur_period > 0 and step_index%blur_period==0:
+            x.assign(gaussian_filter2d(x))
+
         with tf.GradientTape() as tape:
+            tape.watch(x)
             # Here we multiply by the identity matrix given by tf.eye 
             # This means we only maximize a single class, not every class!
             loss: tf.Tensor = model(x)*tf.eye(num_classes)  # type: ignore
@@ -465,6 +491,8 @@ def maximal_class_activations(
         average_grads = tf.reshape(tf.sqrt(tf.reduce_mean(tf.square(grads), axis=[1,2,3])), grads_shape)
         normalized_grads = grads/(average_grads + 1e-5)
         x.assign_add( normalized_grads*step_size )
+        # x.assign(tf.clip_by_value(x, 0, 1))
+
     # We remap images to have min/max of 0-1
     x = (x-tf.math.reduce_min(x)) / (tf.math.reduce_max(x) - tf.math.reduce_min(x))
     # Then we map this into a list for ease of use
